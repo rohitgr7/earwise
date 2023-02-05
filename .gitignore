@@ -1,0 +1,19 @@
+# Python
+__pycache__*
+
+# MacOps
+.DS_Store
+
+# environment
+.env
+
+# virtual environment
+venv/
+
+# Development
+tmp/
+tmp.py
+whisper_cpp/
+*.srt
+*.mp3
+*.wav
