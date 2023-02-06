@@ -114,7 +114,8 @@ def _main():
     file_type = None
     if stage == 1:
         _setup()
-        st.header("Audio Search")
+        st.header("Earwise")
+        st.subheader("Search within Audio")
         st.info("To restart the app, please refresh :)")
         file_type = _display_input_type()
         stage = 2
