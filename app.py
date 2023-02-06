@@ -4,6 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from models.nlp import prepare_similarity_model
 from models.whisper import prepare_whisper_model, whisper_recognize
 from utils.audio import convert_to_hz, extract_audio_from_video
 from utils.text import get_top_timestamps
@@ -84,6 +85,7 @@ def _whisper_recognize(media_path, file_type):
 @st.cache(show_spinner=False)
 def _setup():
     prepare_whisper_model()
+    prepare_similarity_model()
 
 
 def display_media(media_path, timestamps, media_type):
@@ -139,8 +141,8 @@ def _main():
         search_query = st.text_input(label="Search...")
 
         if search_query:
-            with st.spinner("Searching..."):
-                timestamps = get_top_timestamps(transcriptions, search_query, threshold=0.7)
+            with st.spinner("Searching something..."):
+                timestamps = get_top_timestamps(transcriptions, search_query, threshold=0.5)
 
             media_type = "video" if file_type in ("YT Video", "Existing Sample") else "audio"
             display_media(media_path, timestamps, media_type)

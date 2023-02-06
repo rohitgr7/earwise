@@ -6,21 +6,25 @@ from yt_dlp import YoutubeDL
 
 
 def download_video(link):
-    with YoutubeDL(
-        {
-            "format": "best",
-            "outtmpl": "%(title)s.%(ext)s",
-            "postprocessors": [
-                {
-                    "key": "FFmpegVideoConvertor",
-                    "preferedformat": "mp4",
-                }
-            ],
-            "postprocessor_args": ["-ar", "16000"],
-        }
-    ) as ydl:
-        file = ydl.extract_info(link)
-    path = Path(f"{file['title']}.mp4")
+    yt_opts = {
+        "format": "best",
+        "outtmpl": "%(title)s.%(ext)s",
+        "postprocessors": [
+            {
+                "key": "FFmpegVideoConvertor",
+                "preferedformat": "mp4",
+            }
+        ],
+        "postprocessor_args": ["-ar", "16000"],
+    }
+    with YoutubeDL(yt_opts) as ydl:
+        file = ydl.extract_info(link, download=False)
+
+    yt_opts["outtmpl"] = file["id"] + ".%(ext)s"
+    with YoutubeDL(yt_opts) as ydl:
+        file = ydl.extract_info(link, download=True)
+
+    path = Path(f"{file['id']}.mp4")
     return path
 
 

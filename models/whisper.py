@@ -15,7 +15,6 @@ def whisper_recognize(audio_file_path):
         "whisper_cpp/main",
         f"-m whisper_cpp/models/ggml-{model_size}.bin",
         f"'{str(audio_file_path)}'",
-        "-pc",
         "--output-srt",
     ]
 
