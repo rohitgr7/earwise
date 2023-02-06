@@ -142,7 +142,7 @@ def _main():
         search_query = st.text_input(label="Search...")
 
         if search_query:
-            with st.spinner("Searching something..."):
+            with st.spinner("Searching audio..."):
                 timestamps = get_top_timestamps(transcriptions, search_query, threshold=0.5)
 
             media_type = "video" if file_type in ("YT Video", "Existing Sample") else "audio"

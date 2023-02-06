@@ -34,5 +34,4 @@ def get_top_timestamps(transcriptions, search_query, threshold=0.7):
     pred_ixs = (scores > threshold).tolist()
 
     result = list(compress(transcriptions, pred_ixs))
-    breakpoint()
     return [x["start"] for x in result]

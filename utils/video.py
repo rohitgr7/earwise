@@ -20,11 +20,12 @@ def download_video(link):
     with YoutubeDL(yt_opts) as ydl:
         file = ydl.extract_info(link, download=False)
 
-    yt_opts["outtmpl"] = file["id"] + ".%(ext)s"
+    file_id = file["id"].replace("-", "_")
+    yt_opts["outtmpl"] = file_id + ".%(ext)s"
     with YoutubeDL(yt_opts) as ydl:
         file = ydl.extract_info(link, download=True)
 
-    path = Path(f"{file['id']}.mp4")
+    path = Path(f"{file_id}.mp4")
     return path
 
 
