@@ -146,6 +146,7 @@ def _main():
         if search_type == "Keyword Search":
             search_query = st.text_input(label="Search a keyword", placeholder="weekend routine")
             clear = st.button("Clear results")
+            st.warning("Make sure to clear the results before new search :)")
             placeholder = st.empty()
             if clear:
                 placeholder.empty()
@@ -163,6 +164,7 @@ def _main():
         elif search_type == "Ask a question":
             search_query = st.text_input(label="Ask a question", placeholder="What do you do on weekend?")
             clear = st.button("Clear results")
+            st.warning("Make sure to clear the results before new search :)")
             placeholder = st.empty()
             if clear:
                 placeholder.empty()
