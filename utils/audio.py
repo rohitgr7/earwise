@@ -11,7 +11,7 @@ def convert_to_hz(audio_fpath, hz=16000):
 
 
 def extract_audio_from_video(video_path, hz=16000):
-    audio_path = Path(f"{video_path.stem}.wav")
+    audio_path = video_path.parents[0] / f"{Path(video_path).stem}.wav"
     video = VideoFileClip(str(video_path))
     audio = video.audio
     audio = audio.set_fps(hz)

@@ -9,7 +9,7 @@ def prepare_whisper_model():
 
 
 def whisper_recognize(audio_file_path):
-    model_size = "base"
+    model_size = "base.en"
 
     commands = [
         "whisper_cpp/main",

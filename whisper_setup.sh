@@ -5,4 +5,4 @@ if [ ! -d "$FOLDER" ] ; then
     git clone "$URL" "$FOLDER"
 fi
 
-make base -C whisper_cpp
+make base.en -C whisper_cpp

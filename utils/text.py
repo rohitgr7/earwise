@@ -1,9 +1,28 @@
-from itertools import compress
-
 import torch
 import torch.nn.functional as F
 
 from models.nlp import prepare_similarity_model
+
+
+def remove_close_timestamps(transcriptions, sec=30):
+    result = [transcriptions[0]]
+    i = 0
+
+    while True:
+        j = i + 1
+        for trans in transcriptions[i + 1 :]:
+            if trans["start"] <= (transcriptions[i]["start"] + sec):
+                j += 1
+                continue
+            break
+
+        i = j
+        if i >= len(transcriptions):
+            break
+        else:
+            result.append(transcriptions[i])
+
+    return result
 
 
 def _mean_pooling(model_output, attention_mask):
@@ -31,7 +50,14 @@ def get_top_timestamps(transcriptions, search_query, threshold=0.7):
     trans_embed = sentence_embeddings[:-1]
     query_embed = sentence_embeddings[-1]
     scores = trans_embed @ query_embed
-    pred_ixs = (scores > threshold).tolist()
+    pred_ixs = scores.numpy().argsort()[::-1]
+    scores = scores[pred_ixs.tolist()]
+    pred_ixs = pred_ixs[scores > threshold].tolist()
+    result = [transcriptions[i] for i in pred_ixs]
+    result = sorted(result, key=lambda x: x["start"])
 
-    result = list(compress(transcriptions, pred_ixs))
+    if result:
+        result = remove_close_timestamps(result)
+
+    result = sorted(result, key=lambda x: x["start"])
     return [x["start"] for x in result]

@@ -1,4 +1,3 @@
-import math
 import os
 from pathlib import Path
 
@@ -14,7 +13,7 @@ stage = 1
 
 
 def _display_input_type():
-    file_type = st.selectbox(label="File type", options=["<select>", "Audio", "YT Video", "Existing sample"])
+    file_type = st.selectbox(label="File type", options=["<select>", "Audio", "YT Video", "Existing Sample"])
     return file_type
 
 
@@ -88,7 +87,7 @@ def _setup():
     prepare_similarity_model()
 
 
-def display_media(media_path, timestamps, media_type):
+def display_media(media_path, timestamps, media_type, placeholder):
     def _display_media_at_timestamp(media_bytes, timestamp, media_type, st_obj):
         if media_type == "audio":
             st_obj.audio(media_bytes, format="audio/wav", start_time=timestamp)
@@ -98,14 +97,15 @@ def display_media(media_path, timestamps, media_type):
     with open(media_path, "rb") as fp:
         media_bytes = fp.read()
 
-    col1, col2 = st.columns(2)
-    mid_timestamps = math.ceil(len(timestamps) / 2)
+    # with st.empty():
+    with placeholder.container():
+        col1, col2 = st.columns(2)
 
-    for timestamp in timestamps[:mid_timestamps]:
-        _display_media_at_timestamp(media_bytes, timestamp, media_type, col1)
+        for timestamp in timestamps[::2]:
+            _display_media_at_timestamp(media_bytes, timestamp, media_type, col1)
 
-    for timestamp in timestamps[mid_timestamps:]:
-        _display_media_at_timestamp(media_bytes, timestamp, media_type, col2)
+        for timestamp in timestamps[1::2]:
+            _display_media_at_timestamp(media_bytes, timestamp, media_type, col2)
 
 
 def _main():
@@ -126,7 +126,7 @@ def _main():
             media_path = _audio_upload()
         elif file_type == "YT Video":
             media_path = _video_link_upload()
-        elif file_type == "Existing sample":
+        elif file_type == "Existing Sample":
             media_path = _sample_upload()
 
         if media_path:
@@ -139,14 +139,18 @@ def _main():
         stage = 4
 
     if stage == 4:
-        search_query = st.text_input(label="Search...")
+        search_query = st.text_input(label="Search...", placeholder="weekend routine")
+        clear = st.button("Clear results")
+        placeholder = st.empty()
+        if clear:
+            placeholder.empty()
 
-        if search_query:
+        if search_query and not clear:
             with st.spinner("Searching audio..."):
                 timestamps = get_top_timestamps(transcriptions, search_query, threshold=0.5)
 
             media_type = "video" if file_type in ("YT Video", "Existing Sample") else "audio"
-            display_media(media_path, timestamps, media_type)
+            display_media(media_path, timestamps, media_type, placeholder)
 
 
 if __name__ == "__main__":
