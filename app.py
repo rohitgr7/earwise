@@ -171,7 +171,7 @@ def _main():
 
             if search_query and not clear:
                 with st.spinner("Searching audio..."):
-                    timestamp = get_top_timestamp_for_question(transcriptions, search_query, threshold=0.4)
+                    timestamp = get_top_timestamp_for_question(transcriptions, search_query, threshold=0.1)
 
                 if not timestamp:
                     st.text("No result. Please try something else :)")
