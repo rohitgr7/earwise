@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from models.nlp import prepare_similarity_model
+from models.nlp import prepare_qna_pipeline, prepare_similarity_model
 
 
 def remove_close_timestamps(transcriptions, sec=30):
@@ -31,7 +31,7 @@ def _mean_pooling(model_output, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 
-def get_top_timestamps(transcriptions, search_query, threshold=0.7):
+def get_top_timestamps_for_keyword(transcriptions, search_query, threshold=0.7):
     model, tokenizer = prepare_similarity_model()
     texts = [x["text"] for x in transcriptions]
     texts.append(search_query)
@@ -61,3 +61,28 @@ def get_top_timestamps(transcriptions, search_query, threshold=0.7):
 
     result = sorted(result, key=lambda x: x["start"])
     return [x["start"] for x in result]
+
+
+def get_top_timestamp_for_question(transcriptions, question, threshold=0.4):
+    pipeline = prepare_qna_pipeline()
+
+    start_time_map = []
+    start_ix = 0
+    context = ""
+    for trans in transcriptions:
+        end_ix = start_ix + len(trans["text"])
+        start_time_map.append((trans["start"], start_ix))
+        start_ix = end_ix
+        context += trans["text"]
+
+    result = pipeline(question=question, context=context)
+    if result["score"] < threshold:
+        return None
+
+    timestamp = start_time_map[0][0]
+    for x in start_time_map:
+        if x[1] > result["start"]:
+            break
+        timestamp = x[0]
+
+    return timestamp
