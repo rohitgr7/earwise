@@ -3,10 +3,10 @@ from pathlib import Path
 
 import streamlit as st
 
-from models.nlp import prepare_similarity_model
+from models.nlp import prepare_qna_pipeline, prepare_similarity_model
 from models.whisper import prepare_whisper_model, whisper_recognize
 from utils.audio import convert_to_hz, extract_audio_from_video
-from utils.text import get_top_timestamps
+from utils.text import get_top_timestamp_for_question, get_top_timestamps_for_keyword
 from utils.video import download_video, valid_link
 
 stage = 1
@@ -85,6 +85,7 @@ def _whisper_recognize(media_path, file_type):
 def _setup():
     prepare_whisper_model()
     prepare_similarity_model()
+    prepare_qna_pipeline()
 
 
 def display_media(media_path, timestamps, media_type, placeholder):
@@ -139,18 +140,42 @@ def _main():
         stage = 4
 
     if stage == 4:
-        search_query = st.text_input(label="Search...", placeholder="weekend routine")
-        clear = st.button("Clear results")
-        placeholder = st.empty()
-        if clear:
-            placeholder.empty()
+        search_type = st.selectbox(
+            label="What do you want to do?", options=["<select>", "Keyword Search", "Ask a question"]
+        )
+        if search_type == "Keyword Search":
+            search_query = st.text_input(label="Search a keyword", placeholder="weekend routine")
+            clear = st.button("Clear results")
+            placeholder = st.empty()
+            if clear:
+                placeholder.empty()
 
-        if search_query and not clear:
-            with st.spinner("Searching audio..."):
-                timestamps = get_top_timestamps(transcriptions, search_query, threshold=0.5)
+            if search_query and not clear:
+                with st.spinner("Searching audio..."):
+                    timestamps = get_top_timestamps_for_keyword(transcriptions, search_query, threshold=0.5)
 
-            media_type = "video" if file_type in ("YT Video", "Existing Sample") else "audio"
-            display_media(media_path, timestamps, media_type, placeholder)
+                if not timestamps:
+                    st.text("No result. Please try something else :)")
+                else:
+                    media_type = "video" if file_type in ("YT Video", "Existing Sample") else "audio"
+                    display_media(media_path, timestamps, media_type, placeholder)
+
+        elif search_type == "Ask a question":
+            search_query = st.text_input(label="Ask a question", placeholder="What do you do on weekend?")
+            clear = st.button("Clear results")
+            placeholder = st.empty()
+            if clear:
+                placeholder.empty()
+
+            if search_query and not clear:
+                with st.spinner("Searching audio..."):
+                    timestamp = get_top_timestamp_for_question(transcriptions, search_query, threshold=0.4)
+
+                if not timestamp:
+                    st.text("No result. Please try something else :)")
+                else:
+                    media_type = "video" if file_type in ("YT Video", "Existing Sample") else "audio"
+                    display_media(media_path, [timestamp], media_type, placeholder)
 
 
 if __name__ == "__main__":
