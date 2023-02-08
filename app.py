@@ -54,6 +54,10 @@ def _video_link_upload():
             with st.spinner("Downloading..."):
                 video_path = _download_video(yt_link)
 
+            if video_path is None:
+                st.error("Unable to download the video! Please try another one :)")
+                return None
+
             with open(video_path, "rb") as fp:
                 st.video(fp.read(), format="video/mp4")
 
