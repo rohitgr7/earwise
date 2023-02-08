@@ -18,11 +18,13 @@ def download_video(link):
         "postprocessor_args": ["-ar", "16000"],
     }
     with YoutubeDL(yt_opts) as ydl:
+        ydl.cache.remove()
         file = ydl.extract_info(link, download=False)
 
     file_id = file["id"].replace("-", "_")
     yt_opts["outtmpl"] = file_id + ".%(ext)s"
     with YoutubeDL(yt_opts) as ydl:
+        ydl.cache.remove()
         file = ydl.extract_info(link, download=True)
 
     path = Path(f"{file_id}.mp4")
