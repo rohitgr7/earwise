@@ -1,16 +1,32 @@
 import re
 from pathlib import Path
 
-import pytube
 import requests
-from pytube import YouTube
+from yt_dlp import YoutubeDL
 
 
 def download_video(link):
-    file_id = pytube.extract.video_id(link).replace("-", "_")
-    YouTube(link).streams.filter(progressive=True, file_extension="mp4").order_by("resolution").asc().first().download(
-        output_path=".", filename=f"{file_id}.mp4"
-    )
+    yt_opts = {
+        "format": "best",
+        "outtmpl": "%(title)s.%(ext)s",
+        "postprocessors": [
+            {
+                "key": "FFmpegVideoConvertor",
+                "preferedformat": "mp4",
+            }
+        ],
+        "postprocessor_args": ["-ar", "16000"],
+    }
+    with YoutubeDL(yt_opts) as ydl:
+        ydl.cache.remove()
+        file = ydl.extract_info(link, download=False)
+
+    file_id = file["id"].replace("-", "_")
+    yt_opts["outtmpl"] = file_id + ".%(ext)s"
+    with YoutubeDL(yt_opts) as ydl:
+        ydl.cache.remove()
+        file = ydl.extract_info(link, download=True)
+
     path = Path(f"{file_id}.mp4")
     return path
 
