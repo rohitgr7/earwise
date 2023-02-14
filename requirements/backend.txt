@@ -1,0 +1,6 @@
+fastapi==0.91.0
+torch==1.13.1
+transformers==4.26.0
+uvicorn==0.20.0
+python-multipart==0.0.5
+pysrt==1.1.2
