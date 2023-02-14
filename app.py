@@ -113,6 +113,7 @@ def _main():
         st.header("Earwise")
         st.subheader("Search within Audio")
         st.info("To restart the app, please refresh :)")
+        st.warning("Please don't overuse, it's running on free-tier :)")
         file_type = _display_input_type()
         stage = 2
 
