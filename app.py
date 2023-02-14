@@ -53,7 +53,7 @@ def _video_link_upload():
             with st.spinner("Downloading..."):
                 video_path = _download_video(yt_link)
 
-            if "error" in video_path:
+            if isinstance(video_path, dict) and "error" in video_path:
                 st.error(video_path["error"])
                 return None
 
@@ -110,7 +110,7 @@ def _main():
 
     file_type = None
     if stage == 1:
-        st.header("Earwise")
+        st.header("Earwise (Only English)")
         st.subheader("Search within Audio")
         st.info("To restart the app, please refresh :)")
         st.warning("Please don't overuse, it's running on free-tier :)")
