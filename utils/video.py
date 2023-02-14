@@ -22,6 +22,9 @@ def download_video(link):
             ydl.cache.remove()
             file = ydl.extract_info(link, download=False)
 
+        if file["duration"] > 420:
+            return {"error": "Please try a video with duration upto 7 min :)"}
+
         file_id = file["id"].replace("-", "_")
         yt_opts["outtmpl"] = file_id + ".%(ext)s"
         with YoutubeDL(yt_opts) as ydl:
@@ -30,8 +33,8 @@ def download_video(link):
 
         path = Path(f"{file_id}.mp4")
         return path
-    except:
-        return None
+    except BaseException:
+        return {"error": "Unable to download the video! Please try another one :)"}
 
 
 def valid_link(link):

@@ -1,10 +1,9 @@
 import os
 from pathlib import Path
 
+import requests
 import streamlit as st
 
-from models.nlp import prepare_qna_pipeline, prepare_similarity_model
-from models.whisper import prepare_whisper_model, whisper_recognize
 from utils.audio import convert_to_hz, extract_audio_from_video
 from utils.text import get_top_timestamp_for_question, get_top_timestamps_for_keyword
 from utils.video import download_video, valid_link
@@ -42,7 +41,7 @@ def _audio_upload():
     return None
 
 
-@st.cache(show_spinner=False)
+@st.cache(show_spinner=False, ttl=3600 * 6)
 def _download_video(yt_link):
     return download_video(yt_link)
 
@@ -54,8 +53,8 @@ def _video_link_upload():
             with st.spinner("Downloading..."):
                 video_path = _download_video(yt_link)
 
-            if video_path is None:
-                st.error("Unable to download the video! Please try another one :)")
+            if "error" in video_path:
+                st.error(video_path["error"])
                 return None
 
             with open(video_path, "rb") as fp:
@@ -68,28 +67,21 @@ def _video_link_upload():
     return None
 
 
-@st.cache(show_spinner=False)
-def _whisper_recognize(media_path, file_type):
+@st.cache(show_spinner=False, ttl=3600 * 6)
+def _whisper_recognize(url, media_path, file_type):
     if file_type in ("YT Video", "Existing Sample"):
         audio_path = extract_audio_from_video(media_path)
     else:
         audio_path = media_path
 
-    transcriptions, output_srt_filepath = whisper_recognize(audio_path)
+    files = {"file_upload": open(audio_path, "rb")}
+    response = requests.post(url, files=files)
+    transcriptions = response.json()["result"]
 
-    if file_type in ("YT Video", "Existing Sample"):
+    if file_type in ("YT Video", "Existing Sample") and os.path.exists(audio_path):
         os.remove(audio_path)
 
-    os.remove(output_srt_filepath)
-
     return transcriptions
-
-
-@st.cache(show_spinner=False)
-def _setup():
-    prepare_whisper_model()
-    prepare_similarity_model()
-    prepare_qna_pipeline()
 
 
 def display_media(media_path, timestamps, media_type, placeholder):
@@ -118,10 +110,10 @@ def _main():
 
     file_type = None
     if stage == 1:
-        _setup()
         st.header("Earwise")
         st.subheader("Search within Audio")
         st.info("To restart the app, please refresh :)")
+        st.warning("Please don't overuse, it's running on free-tier :)")
         file_type = _display_input_type()
         stage = 2
 
@@ -139,7 +131,8 @@ def _main():
 
     if stage == 3:
         with st.spinner("Processing..."):
-            transcriptions = _whisper_recognize(media_path, file_type)
+            url = f"{st.secrets['URL']}/transcribe"
+            transcriptions = _whisper_recognize(url, media_path, file_type)
 
         stage = 4
 
@@ -157,7 +150,8 @@ def _main():
 
             if search_query and not clear:
                 with st.spinner("Searching audio..."):
-                    timestamps = get_top_timestamps_for_keyword(transcriptions, search_query, threshold=0.5)
+                    url = f"{st.secrets['URL']}/keyword_query"
+                    timestamps = get_top_timestamps_for_keyword(url, transcriptions, search_query, threshold=0.5)
 
                 if not timestamps:
                     st.text("No result. Please try something else :)")
@@ -175,7 +169,8 @@ def _main():
 
             if search_query and not clear:
                 with st.spinner("Searching audio..."):
-                    timestamp = get_top_timestamp_for_question(transcriptions, search_query, threshold=0.1)
+                    url = f"{st.secrets['URL']}/question_query"
+                    timestamp = get_top_timestamp_for_question(url, transcriptions, search_query, threshold=0.1)
 
                 if not timestamp:
                     st.text("No result. Please try something else :)")
