@@ -1,4 +1,5 @@
 import os
+import subprocess
 from pathlib import Path
 
 import requests
@@ -9,6 +10,11 @@ from utils.text import get_top_timestamp_for_question, get_top_timestamps_for_ke
 from utils.video import download_video, valid_link
 
 stage = 1
+
+
+@st.cache_data(show_spinner=False, ttl=None)
+def _start_server():
+    subprocess.call("uvicorn backend.main:app --host 0.0.0.0 --port 8000 &", shell=True)
 
 
 def _display_input_type():
@@ -41,7 +47,7 @@ def _audio_upload():
     return None
 
 
-@st.cache(show_spinner=False, ttl=3600 * 6)
+@st.cache_data(show_spinner=False, ttl=3600 * 6)
 def _download_video(yt_link):
     return download_video(yt_link)
 
@@ -67,7 +73,7 @@ def _video_link_upload():
     return None
 
 
-@st.cache(show_spinner=False, ttl=3600 * 6)
+@st.cache_data(show_spinner=False, ttl=3600 * 6)
 def _whisper_recognize(url, media_path, file_type):
     if file_type in ("YT Video", "Existing Sample"):
         audio_path = extract_audio_from_video(media_path)
@@ -106,6 +112,7 @@ def display_media(media_path, timestamps, media_type, placeholder):
 
 
 def _main():
+    _start_server()
     global stage
 
     file_type = None
