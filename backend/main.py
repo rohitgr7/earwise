@@ -7,8 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from backend.models.nlp import (
+    predict_keywords,
     predict_top_timestamp_for_question,
     predict_top_timestamps_for_keyword,
+    prepare_keyword_extractor,
     prepare_qna_pipeline,
     prepare_similarity_model,
 )
@@ -17,6 +19,7 @@ from backend.models.whisper import prepare_whisper_model, whisper_recognize
 prepare_whisper_model()
 sim_model, sim_tokenizer = prepare_similarity_model()
 qna_pipeline = prepare_qna_pipeline()
+keyword_extractor = prepare_keyword_extractor()
 
 
 app = FastAPI()
@@ -39,6 +42,10 @@ class KeywordPayload(BaseModel):
 class QuestionPayload(BaseModel):
     context: str
     question: str
+
+
+class KeywordSearchPayload(BaseModel):
+    context: str
 
 
 @app.get("/healthcheck")
@@ -73,3 +80,9 @@ async def predict_keyword_timestamps(data: KeywordPayload):
 async def predict_question_timestamp(data: QuestionPayload):
     result = predict_top_timestamp_for_question(data.context, data.question, qna_pipeline)
     return {"result": result}
+
+
+@app.post("/extract_keywords")
+async def extract_keywords(data: KeywordSearchPayload):
+    keywords = predict_keywords(data.context, keyword_extractor)
+    return {"result": [x[0] for x in keywords]}

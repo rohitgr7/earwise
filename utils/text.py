@@ -68,3 +68,13 @@ def get_top_timestamp_for_question(url, transcriptions, question, threshold=0.4)
         timestamp = x[0]
 
     return timestamp
+
+
+def get_top_keywords(url, transcriptions):
+    context = "".join(x["text"] for x in transcriptions)
+    json_data = {
+        "context": context,
+    }
+    response = requests.post(url, json=json_data)
+    result = response.json()["result"]
+    return result

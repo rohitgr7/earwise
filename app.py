@@ -6,10 +6,8 @@ import requests
 import streamlit as st
 
 from utils.audio import convert_to_hz, extract_audio_from_video
-from utils.text import get_top_timestamp_for_question, get_top_timestamps_for_keyword
+from utils.text import get_top_keywords, get_top_timestamp_for_question, get_top_timestamps_for_keyword
 from utils.video import download_video, valid_link
-
-stage = 1
 
 
 @st.cache_data(show_spinner=False, ttl=None)
@@ -19,7 +17,7 @@ def _start_server():
 
 def _display_input_type():
     file_type = st.selectbox(label="File type", options=["<select>", "Audio", "YT Video", "Existing Sample"])
-    return file_type
+    return file_type if file_type != "<select>" else None
 
 
 def _sample_upload():
@@ -111,20 +109,32 @@ def display_media(media_path, timestamps, media_type, placeholder):
             _display_media_at_timestamp(media_bytes, timestamp, media_type, col2)
 
 
+def _initialize_session_state():
+    if "stage" not in st.session_state:
+        st.session_state["stage"] = 1
+
+    if "search_query" not in st.session_state:
+        st.session_state["search_query"] = ""
+
+    if "search_type" not in st.session_state:
+        st.session_state["search_type"] = ""
+
+
 def _main():
     _start_server()
-    global stage
 
     file_type = None
-    if stage == 1:
+    if st.session_state["stage"] >= 1:
         st.header("Earwise (Only English)")
         st.subheader("Search within Audio")
         st.info("To restart the app, please refresh :)")
         st.warning("Please don't overuse, it's running on free-tier :)")
         file_type = _display_input_type()
-        stage = 2
 
-    if stage == 2:
+        if file_type:
+            st.session_state["stage"] = 2
+
+    if st.session_state["stage"] >= 2:
         media_path = None
         if file_type == "Audio":
             media_path = _audio_upload()
@@ -134,31 +144,63 @@ def _main():
             media_path = _sample_upload()
 
         if media_path:
-            stage = 3
+            st.session_state["stage"] = 3
 
-    if stage == 3:
+    if st.session_state["stage"] >= 3:
         with st.spinner("Processing..."):
             url = f"{st.secrets['URL']}/transcribe"
             transcriptions = _whisper_recognize(url, media_path, file_type)
 
-        stage = 4
+        st.session_state["stage"] = 4
 
-    if stage == 4:
-        search_type = st.selectbox(
-            label="What do you want to do?", options=["<select>", "Keyword Search", "Ask a question"]
-        )
-        if search_type == "Keyword Search":
-            search_query = st.text_input(label="Search a keyword", placeholder="weekend routine")
-            clear = st.button("Clear results")
-            st.warning("Make sure to clear the results before new search :)")
+    if st.session_state["stage"] >= 4:
+        if not st.session_state["search_query"]:
+            search_type = st.selectbox(
+                label="What do you want to do?", options=["<select>", "Keyword Search", "Ask a question"]
+            )
+            st.session_state["search_type"] = search_type
+
+        if st.session_state["search_type"] == "Keyword Search":
+            # Set up some sample tags
+            selected_tag = ""
+            if not st.session_state["search_query"]:
+                url = f"{st.secrets['URL']}/extract_keywords"
+                keywords = get_top_keywords(url, transcriptions)
+                num_cols = len(keywords)
+                container = st.container()
+                cols = container.columns(num_cols)
+
+                for i, tag in enumerate(keywords):
+                    col_idx = i % num_cols
+                    button = cols[col_idx].button(tag)
+                    if button:
+                        selected_tag = tag
+                        st.session_state["search_query"] = selected_tag
+                        st.experimental_rerun()
+
+            search_query = ""
+            if not st.session_state["search_query"]:
+                search_query = st.text_input(label="Search a keyword", placeholder="weekend routine")
+
             placeholder = st.empty()
-            if clear:
-                placeholder.empty()
+            if st.session_state["search_query"]:
+                clear = st.button("Clear results")
+                if clear:
+                    placeholder.empty()
+                    st.session_state["search_query"] = ""
+                    st.session_state["search_type"] = ""
+                    st.experimental_rerun()
 
-            if search_query and not clear:
+            if search_query:
+                st.session_state["search_query"] = search_query
+                st.experimental_rerun()
+
+            if st.session_state["search_query"] and not clear:
                 with st.spinner("Searching audio..."):
                     url = f"{st.secrets['URL']}/keyword_query"
-                    timestamps = get_top_timestamps_for_keyword(url, transcriptions, search_query, threshold=0.5)
+                    timestamps = get_top_timestamps_for_keyword(
+                        url, transcriptions, st.session_state["search_query"], threshold=0.5
+                    )
 
                 if not timestamps:
                     st.text("No result. Please try something else :)")
@@ -166,18 +208,30 @@ def _main():
                     media_type = "video" if file_type in ("YT Video", "Existing Sample") else "audio"
                     display_media(media_path, timestamps, media_type, placeholder)
 
-        elif search_type == "Ask a question":
-            search_query = st.text_input(label="Ask a question", placeholder="What do you do on weekend?")
-            clear = st.button("Clear results")
-            st.warning("Make sure to clear the results before new search :)")
-            placeholder = st.empty()
-            if clear:
-                placeholder.empty()
+        elif st.session_state["search_type"] == "Ask a question":
+            search_query = ""
+            if not st.session_state["search_query"]:
+                search_query = st.text_input(label="Ask a question", placeholder="What do you do on weekend?")
 
-            if search_query and not clear:
+            placeholder = st.empty()
+            if st.session_state["search_query"]:
+                clear = st.button("Clear results")
+                if clear:
+                    placeholder.empty()
+                    st.session_state["search_query"] = ""
+                    st.session_state["search_type"] = ""
+                    st.experimental_rerun()
+
+            if search_query:
+                st.session_state["search_query"] = search_query
+                st.experimental_rerun()
+
+            if st.session_state["search_query"] and not clear:
                 with st.spinner("Searching audio..."):
                     url = f"{st.secrets['URL']}/question_query"
-                    timestamp = get_top_timestamp_for_question(url, transcriptions, search_query, threshold=0.1)
+                    timestamp = get_top_timestamp_for_question(
+                        url, transcriptions, st.session_state["search_query"], threshold=0.1
+                    )
 
                 if not timestamp:
                     st.text("No result. Please try something else :)")
@@ -187,4 +241,5 @@ def _main():
 
 
 if __name__ == "__main__":
+    _initialize_session_state()
     _main()

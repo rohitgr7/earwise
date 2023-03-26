@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from keybert import KeyBERT
 from transformers import AutoModel, AutoTokenizer, pipeline
 
 
@@ -13,6 +14,10 @@ def prepare_similarity_model():
 def prepare_qna_pipeline():
     question_answerer = pipeline("question-answering", model="distilbert-base-cased-distilled-squad")
     return question_answerer
+
+
+def prepare_keyword_extractor():
+    return KeyBERT()
 
 
 def _mean_pooling(model_output, attention_mask):
@@ -47,3 +52,7 @@ def predict_top_timestamps_for_keyword(texts, search_query, threshold, model, to
 def predict_top_timestamp_for_question(context, question, pipeline):
     result = pipeline(question=question, context=context)
     return result
+
+
+def predict_keywords(docs, model):
+    return model.extract_keywords(docs, keyphrase_ngram_range=(1, 2), stop_words="english", use_mmr=True, diversity=0.6)
